@@ -6,6 +6,39 @@
  */
 
 /**
+ * Implements hook_libraries_info().
+ */
+function commerce_todopago_libraries_info() {
+  $libraries = array();
+
+  $libraries['todopago'] = array(
+    'name' => 'Todo Pago PHP SDK',
+    'vendor url' => 'http://www.todopago.com.ar',
+    'download url' => 'https://github.com/TodoPago/sdk-php',
+    'path' => 'lib',
+    'version arguments' => array(
+      'file' => 'lib/TodoPago.php',
+      'pattern' => '/^define\(\'VERSION_TODOPAGO\', \'([0-9\.]+)\'\);$/',
+      'lines' => 10,
+    ),
+    'files' => array(
+      'php' => array(
+        'TodoPago.php',
+      ),
+    ),
+    'integration files' => array(
+      'commerce_todopago' => array(
+        'php' => array(
+          'includes/commerce_todopago.service.inc',
+        ),
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
  * Loads a stored query by ID.
  *
  * @param $id
@@ -61,37 +94,6 @@ function commerce_todopago_query_delete($id) {
 }
 
 /**
- * Returns the URL to the specified Todo Pago's API server.
- *
- * @param $server
- *   Either sandbox or live indicating which server to get the URL for.
- *
- * @return
- *   The URL to use to submit requests to the Todo Pago's API server.
- */
-function commerce_todopago_api_server_url($server) {
-  switch ($server) {
-    case 'sandbox':
-      return 'https://50.19.97.101:8243/services';
-    case 'live':
-      return 'https://50.19.97.101:8243/services';
-  }
-}
-
-/**
- * Returns the Todo Pago's WSDLs.
- *
- * @return
- *   An array with the Todo Pago's WSDLs.
- */
-function commerce_todopago_wsdl() {
-  return array(
-    'Authorize' => 'Authorize.wsdl',
-    'Operations' => 'Operations.wsdl',
-  );
-}
-
-/**
  * Loads the payment transaction matching the Todo Pago's transaction ID.
  *
  * @param $answer_key
@@ -117,28 +119,18 @@ function commerce_todopago_payment_transaction_load($answer_key) {
  *   currency codes accepted by the specified Todo Pago's payment method.
  */
 function commerce_todopago_currencies($method_id = '') {
-  switch ($method_id) {
-    default:
-      return drupal_map_assoc(array('ARS'));
+  $currencies = array();
+
+  if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
+    $currencies = TodoPagoConnector::get_currencies();
+
+    switch ($method_id) {
+      default:
+        return drupal_map_assoc($currencies);
+    }
   }
 }
 
-
-/**
- * Formats a price amount into a decimal value as expected by Todo Pago.
- *
- * @param $amount
- *   An integer price amount.
- * @param $currency_code
- *   The currency code of the price.
- *
- * @return
- *   The decimal price amount as expected by Todo Pago's API servers.
- */
-function commerce_todopago_price_amount($amount, $currency_code) {
-  $rounded_amount = commerce_currency_round($amount, commerce_currency_load($currency_code));
-  return number_format(commerce_currency_amount_to_decimal($rounded_amount, $currency_code), 2, '.', '');
-}
 
 /**
  * Implements hook_commerce_payment_method_info().
@@ -249,7 +241,7 @@ function commerce_todopago_submit_form($payment_method, $pane_values, $checkout_
  * Payment method callback: redirect form, a wrapper around the module's general
  *   use function for building a Todo Pago's form.
  */
-function commerce_todopagos_redirect_form($form, &$form_state, $order, $payment_method) {
+function commerce_todopago_redirect_form($form, &$form_state, $order, $payment_method) {
   // Return an error if the enabling action's settings haven't been configured.
   if (
     (empty($payment_method['settings']['merchant'])) ||
@@ -260,15 +252,9 @@ function commerce_todopagos_redirect_form($form, &$form_state, $order, $payment_
     return array();
   }
 
-  $settings = array(
-    // Return to the previous page when payment is canceled
-    'url_error' => url('checkout/' . $order->order_id . '/payment/back/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
+  $payment_method['settings']['instance_id'] = $payment_method['instance_id'];
 
-    // Return to the payment redirect page for processing successful payments
-    'url_ok' => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
-  );
-
-  return commerce_todopago_order_form($form, $form_state, $order, $payment_method['settings'] + $settings);
+  return commerce_todopago_order_form($form, $form_state, $order, $payment_method['settings']);
 }
 
 /**
@@ -292,102 +278,38 @@ function commerce_todopago_redirect_form_validate($order, $payment_method) {
  *   An array of settings used to build out the form, including:
  *   - server: which server to use, either sandbox or live
  *   - merchant: the merchant code of the company the payment submits to
- *   - url_error: the URL Todo Pago should send the user to on cancellation
- *   - url_ok: the URL Todo Pago should send the user to on successful payment
  *   - currency_code: the currency code to use for this payment if the
  *     total for the order is in a non supported currency
  *   - authorization: the authorization code for the company
  *   - security: the security code for the company
+ *   - instance_id: the instance_id of the payment method
  *
  * @return
  *   A renderable form array.
  */
 function commerce_todopago_order_form($form, &$form_state, $order, $settings) {
-//  $wrapper = entity_metadata_wrapper('commerce_order', $order);
-//
-//  // Determine the currency code to use to actually process the transaction,
-//  // which will either be the default currency code or the currency code of the
-//  // order if it's supported by PayPal if that option is enabled.
-//  $currency_code = $settings['currency_code'];
-//  $order_currency_code = $wrapper->commerce_order_total->currency_code->value();
-//
-//  if (!empty($settings['allow_supported_currencies']) && in_array($order_currency_code, array_keys(commerce_paypal_currencies('paypal_wps')))) {
-//    $currency_code = $order_currency_code;
-//  }
-//
-//  $amount = $wrapper->commerce_order_total->amount->value();
-//
-//  // Ensure a default value for the payment_method setting.
-//  $settings += array('payment_method' => '');
-//
-//  // Build the data array that will be translated into hidden form values.
-//  $data = array(
-//    // Specify the checkout experience to present to the user.
-//    'cmd' => '_cart',
-//
-//    // Signify we're passing in a shopping cart from our system.
-//    'upload' => 1,
-//
-//    // The store's PayPal e-mail address
-//    'business' => $settings['business'],
-//
-//    // The path PayPal should send the IPN to
-//    'notify_url' => commerce_paypal_ipn_url($settings['payment_method']),
-//
-//    // The application generating the API request
-//    'bn' => 'CommerceGuys_Cart_PPS',
-//
-//    // Set the correct character set
-//    'charset' => 'utf-8',
-//
-//    // Do not display a comments prompt at PayPal
-//    'no_note' => 1,
-//
-//    // Do not display a shipping address prompt at PayPal
-//    'no_shipping' => 1,
-//
-//    // Return to the review page when payment is canceled
-//    'cancel_return' => $settings['cancel_return'],
-//
-//    // Return to the payment redirect page for processing successful payments
-//    'return' => $settings['return'],
-//
-//    // Return to this site with payment data in the POST
-//    'rm' => 2,
-//
-//    // The type of payment action PayPal should take with this order
-//    'paymentaction' => $settings['payment_action'],
-//
-//    // Set the currency and language codes
-//    'currency_code' => $currency_code,
-//    'lc' => $settings['language'],
-//
-//    // Use the timestamp to generate a unique invoice number
-//    'invoice' => commerce_paypal_ipn_invoice($order),
-//
-//    // Define a single item in the cart representing the whole order
-//    'amount_1' => commerce_paypal_price_amount(commerce_currency_convert($amount, $order_currency_code, $currency_code), $currency_code),
-//    'item_name_1' => t('Order @order_number at @store', array('@order_number' => $order->order_number, '@store' => variable_get('site_name', url('<front>', array('absolute' => TRUE))))),
-//    'on0_1' => t('Product count'),
-//    'os0_1' => commerce_line_items_quantity($wrapper->commerce_line_items, commerce_product_line_item_types()),
-//  );
-//
-//  // Allow modules to alter parameters of the API request.
-//  drupal_alter('commerce_paypal_wps_order_form_data', $data, $order);
-//
-//  $form['#action'] = commerce_paypal_wps_server_url($settings['server']);
-//
-//  foreach ($data as $name => $value) {
-//    if (!empty($value)) {
-//      $form[$name] = array('#type' => 'hidden', '#value' => $value);
-//    }
-//  }
-//
-//  $form['submit'] = array(
-//    '#type' => 'submit',
-//    '#value' => t('Proceed to PayPal'),
-//  );
-//
+  $form = array();
+
+  if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
+    try {
+      $todopago = new TodoPagoConnector($settings);
+
+      $form = $todopago->create_order_form($order);
+    }
+    catch (Exception $e) {
+      commerce_payment_redirect_pane_previous_page($order);
+
+      watchdog('commerce_todopago', 'There was an error with the payment for Order Nr. @order_number: %error', array('@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
+
+      drupal_set_message($e->getMessage(), 'error');
+
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Try again'),
+      );
+    }
+  }
+
   return $form;
 }
 
