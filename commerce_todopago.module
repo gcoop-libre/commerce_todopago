@@ -138,7 +138,7 @@ function commerce_todopago_currencies($method_id = '') {
 function commerce_todopago_commerce_payment_method_info() {
   $payment_methods = array();
 
-  $payment_methods['todopago'] = array(
+  $payment_methods['commerce_todopago'] = array(
     'base' => 'commerce_todopago',
     'title' => t('Todo Pago'),
     'short_title' => t('Todo Pago'),
