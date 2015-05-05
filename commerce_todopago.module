@@ -96,14 +96,14 @@ function commerce_todopago_query_delete($id) {
 /**
  * Loads the payment transaction matching the Todo Pago's transaction ID.
  *
- * @param $answer_key
+ * @param $remote_id
  *   The Todo Pago's transaction ID to search for in the remote_id field.
  *
  * @return
  *   The loaded payment transaction.
  */
-function commerce_todopago_payment_transaction_load($answer_key) {
-  $transactions = commerce_payment_transaction_load_multiple(array(), array('remote_id' => $answer_key));
+function commerce_todopago_payment_transaction_load($remote_id) {
+  $transactions = commerce_payment_transaction_load_multiple(array(), array('remote_id' => $remote_id));
   return $transactions ? reset($transactions) : FALSE;
 }
 
@@ -126,9 +126,11 @@ function commerce_todopago_currencies($method_id = '') {
 
     switch ($method_id) {
       default:
-        return drupal_map_assoc($currencies);
+        $currencies = drupal_map_assoc($currencies);
     }
   }
+
+  return $currencies;
 }
 
 
@@ -258,15 +260,68 @@ function commerce_todopago_redirect_form($form, &$form_state, $order, $payment_m
 }
 
 /**
- * Payment method callback: redirect form return validation.
+ * Payment method callback; cancellation callback for the redirected payments.
+ */
+function commerce_todopago_redirect_form_back($order, $payment_method) {
+  // This callback shouldn't we necessary
+  // Todo Pago does not have a Cancel button
+}
+
+/**
+ * Payment method callback; validation callback for redirected payments.
  */
 function commerce_todopago_redirect_form_validate($order, $payment_method) {
-  // This may be an unnecessary step, but if for some reason the user does end
-  // up returning at the success URL with a Failed payment, go back.
-    // TODO: Implementar verificación del resultado
-//  if (!empty($_POST['payment_status']) && $_POST['payment_status'] == 'Failed') {
-//    return FALSE;
-//  }
+  $return = FALSE;
+
+  if (
+    (!empty($_GET['Answer'])) &&
+    ($transaction = commerce_todopago_payment_transaction_load($_GET['Answer'])) &&
+    ($order->order_number == $transaction->order_id)
+  ) {
+    if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
+      $todopago = new TodoPagoConnector($payment_method['settings']);
+
+      try {
+        $todopago->update_status($transaction);
+      }
+      catch (Exception $e) {
+        watchdog('commerce_todopago', 'There was an error fetching the status of the Transaction Nr. @transaction_number of the payment for Order Nr. @order_number: %error', array('@transaction_number' => $transaction->transaction_id, '@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
+
+        drupal_set_message(t('There was an error getting the payment status from Todo Pago. Please contact an administrator before trying again.'), 'error');
+      }
+
+      switch ($transaction->status) {
+        case COMMERCE_PAYMENT_STATUS_SUCCESS:
+          $return = TRUE;
+          break;
+        case COMMERCE_PAYMENT_STATUS_FAILURE:
+          $return = FALSE;
+          break;
+        case COMMERCE_PAYMENT_STATUS_PENDING:
+          // We let the customer continue with the checkout,
+          // but without a payment transaction for the order
+          $return = TRUE;
+          break;
+      }
+    }
+  }
+
+  return $return;
+}
+
+/**
+ * Payment method callback; submission callback for redirected payments.
+ */
+function commerce_todopago_redirect_form_submit($order, $payment_method) {
+  if (
+    (!empty($_GET['Answer'])) &&
+    ($transaction = commerce_todopago_payment_transaction_load($_GET['Answer'])) &&
+    ($order->order_number == $transaction->order_id)
+  ) {
+    if ($transaction->status == COMMERCE_PAYMENT_STATUS_PENDING) {
+      drupal_set_message(t('We are waiting for the confirmation of your payment. If you think it should be confirmed by now, please contact an administrator.'), 'warning');
+    }
+  }
 }
 
 /**
