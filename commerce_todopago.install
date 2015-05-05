@@ -5,6 +5,51 @@
  * Installs the tables required by Commerce Todo Pago.
  */
 
+/**
+ * Implements hook_requirements().
+ */
+function commerce_todopago_requirements($phase) {
+  if ($phase == 'install') {
+    if (!extension_loaded('soap')) {
+      $requirement_severity = REQUIREMENT_ERROR;
+      $description = t('The Todo Pago module requires the PHP SOAP extension be installed on the web server.');
+    }
+    else {
+      $requirement_severity = REQUIREMENT_OK;
+      $description= '';
+    }
+
+    $requirements = array(
+      array(
+        'title' => t('Todo Pago'),
+        'description' => $description,
+        'severity' => $requirement_severity,
+      ),
+    );
+  }
+  elseif ($phase == 'runtime') {
+    $library = libraries_load('todopago');
+    if (empty($library['loaded'])) {
+      $requirement_severity = REQUIREMENT_ERROR;
+      $description = t('The Todo Pago SDK is missing.');
+    }
+    else {
+      $requirement_severity = REQUIREMENT_OK;
+      $description= 'The Todo Pago SDK is installed.';
+    }
+
+    $requirements = array(
+      array(
+        'title' => t('Todo Pago'),
+        'value' => '',
+        'description' => $description,
+        'severity' => $requirement_severity,
+      ),
+    );
+  }
+
+  return $requirements;
+}
 
 /**
  * Implements hook_schema().
