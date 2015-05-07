@@ -154,19 +154,3 @@ function commerce_todopago_commerce_payment_method_info() {
   return $payment_methods;
 }
 
-/**
- * Returns the default settings for the Todo Pago's payment method.
- */
-function commerce_todopago_default_settings() {
-  $default_currency = commerce_default_currency();
-
-  return array(
-    'merchant' => '',
-    'currency_code' => in_array($default_currency, array_keys(commerce_todopago_currencies())) ? $default_currency : 'ARS',
-    'allow_supported_currencies' => FALSE,
-    'authorization' => '',
-    'security' => '',
-    'server' => 'sandbox',
-  );
-}
-

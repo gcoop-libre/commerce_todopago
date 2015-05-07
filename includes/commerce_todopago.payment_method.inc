@@ -62,6 +62,22 @@ function commerce_todopago_settings_form($settings = array()) {
 }
 
 /**
+ * Returns the default settings for the Todo Pago's payment method.
+ */
+function commerce_todopago_default_settings() {
+  $default_currency = commerce_default_currency();
+
+  return array(
+    'merchant' => '',
+    'currency_code' => in_array($default_currency, array_keys(commerce_todopago_currencies())) ? $default_currency : 'ARS',
+    'allow_supported_currencies' => FALSE,
+    'authorization' => '',
+    'security' => '',
+    'server' => 'sandbox',
+  );
+}
+
+/**
  * Payment method callback: adds a message to the submission form if enabled in
  * the payment method settings.
  */
@@ -93,6 +109,50 @@ function commerce_todopago_redirect_form($form, &$form_state, $order, $payment_m
   $payment_method['settings']['instance_id'] = $payment_method['instance_id'];
 
   return commerce_todopago_order_form($form, $form_state, $order, $payment_method['settings']);
+}
+
+/**
+ * Builds a Todo Pago's form from an order object.
+ *
+ * @param $order
+ *   The fully loaded order being paid for.
+ * @param $settings
+ *   An array of settings used to build out the form, including:
+ *   - server: which server to use, either sandbox or live
+ *   - merchant: the merchant code of the company the payment submits to
+ *   - currency_code: the currency code to use for this payment if the
+ *     total for the order is in a non supported currency
+ *   - authorization: the authorization code for the company
+ *   - security: the security code for the company
+ *   - instance_id: the instance_id of the payment method
+ *
+ * @return
+ *   A renderable form array.
+ */
+function commerce_todopago_order_form($form, &$form_state, $order, $settings) {
+  $form = array();
+
+  if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
+    try {
+      $todopago = new TodoPagoConnector($settings);
+
+      $form = $todopago->create_order_form($order);
+    }
+    catch (Exception $e) {
+      commerce_payment_redirect_pane_previous_page($order);
+
+      watchdog('commerce_todopago', 'There was an error with the payment for Order Nr. @order_number: %error', array('@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
+
+      drupal_set_message($e->getMessage(), 'error');
+
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Try again'),
+      );
+    }
+  }
+
+  return $form;
 }
 
 /**
@@ -158,49 +218,5 @@ function commerce_todopago_redirect_form_submit($order, $payment_method) {
       drupal_set_message(t('We are waiting for the confirmation of your payment. If you think it should be confirmed by now, please contact an administrator.'), 'warning');
     }
   }
-}
-
-/**
- * Builds a Todo Pago's form from an order object.
- *
- * @param $order
- *   The fully loaded order being paid for.
- * @param $settings
- *   An array of settings used to build out the form, including:
- *   - server: which server to use, either sandbox or live
- *   - merchant: the merchant code of the company the payment submits to
- *   - currency_code: the currency code to use for this payment if the
- *     total for the order is in a non supported currency
- *   - authorization: the authorization code for the company
- *   - security: the security code for the company
- *   - instance_id: the instance_id of the payment method
- *
- * @return
- *   A renderable form array.
- */
-function commerce_todopago_order_form($form, &$form_state, $order, $settings) {
-  $form = array();
-
-  if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
-    try {
-      $todopago = new TodoPagoConnector($settings);
-
-      $form = $todopago->create_order_form($order);
-    }
-    catch (Exception $e) {
-      commerce_payment_redirect_pane_previous_page($order);
-
-      watchdog('commerce_todopago', 'There was an error with the payment for Order Nr. @order_number: %error', array('@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
-
-      drupal_set_message($e->getMessage(), 'error');
-
-      $form['submit'] = array(
-        '#type' => 'submit',
-        '#value' => t('Try again'),
-      );
-    }
-  }
-
-  return $form;
 }
 
