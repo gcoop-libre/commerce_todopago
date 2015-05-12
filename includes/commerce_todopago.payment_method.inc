@@ -178,13 +178,17 @@ function commerce_todopago_redirect_form_back($order, $payment_method) {
 function commerce_todopago_redirect_form_validate($order, $payment_method) {
   $return = FALSE;
 
+  $hash = arg(5);
+  $remote_id = commerce_todopago_remote_id($order, $hash);
   if (
     (!empty($_GET['Answer'])) &&
-    ($transaction = commerce_todopago_payment_transaction_load($_GET['Answer'])) &&
+    (!empty($hash)) &&
+    ($transaction = commerce_todopago_payment_transaction_load($remote_id)) &&
     ($order->order_number == $transaction->order_id)
   ) {
-//    persistir Answer y ver de agregar el uniqid en algún lado para identificar bien la transacción,
-//      ya que Answer puede (y debería) no ser igual al OPERATIONID
+    $transaction->data['answer_key'] = $_GET['Answer'];
+    commerce_payment_transaction_save($transaction);
+
     if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
       $todopago = new TodoPagoConnector($payment_method['settings']);
 
@@ -220,9 +224,12 @@ function commerce_todopago_redirect_form_validate($order, $payment_method) {
  * Payment method callback; submission callback for redirected payments.
  */
 function commerce_todopago_redirect_form_submit($order, $payment_method) {
+  $hash = arg(5);
+  $remote_id = commerce_todopago_remote_id($order, $hash);
   if (
-    (!empty($_GET['Answer'])) &&
-    ($transaction = commerce_todopago_payment_transaction_load($_GET['Answer'])) &&
+    (!empty($hash)) &&
+    ($transaction = commerce_todopago_payment_transaction_load($remote_id)) &&
+    (!empty($transaction->data['answer_key'])) &&
     ($order->order_number == $transaction->order_id)
   ) {
     if ($transaction->status == COMMERCE_PAYMENT_STATUS_PENDING) {

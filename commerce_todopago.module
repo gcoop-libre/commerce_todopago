@@ -150,6 +150,24 @@ function commerce_todopago_currencies($method_id = '') {
   return $currencies;
 }
 
+/**
+ * Returns the Remote ID value for the received values
+ *
+ * @param $order
+ *   Commerce Order
+ * @param $hash
+ *   An unique hash for the Remote ID
+ *
+ * @return
+ *   A string with the Remote ID
+ */
+function commerce_todopago_remote_id($order, $hash) {
+  if (empty($hash)) {
+    $hash = uniqid();
+  }
+
+  return format_string('@order_id_@hash', array('@order_id' => $order->order_number, '@hash' => $hash));
+}
 
 /**
  * Implements hook_commerce_payment_method_info().

@@ -139,17 +139,20 @@ class TodoPagoConnector {
       $currency_code = $order_currency_code;
     }
 
-    $operation_id = uniqid($wrapper->order_number->value() . '_');
+    $hash = uniqid();
+
+    $operation_id = commerce_todopago_remote_id($order, $hash);
     $amount = $this->format_price_amount(commerce_currency_convert($wrapper->commerce_order_total->amount->value(), $order_currency_code, $currency_code), $currency_code);
     $customer_email = $wrapper->mail->value();
+    $return_url = url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'] . '/' . $hash, array('absolute' => TRUE));
 
     $todopago_info = array(
       'commerce' => array(
         'Security' => $this->settings['security'],
         'EncodingMethod' => 'XML',
         'Merchant' => $this->settings['merchant'],
-        'URL_OK' => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
-        'URL_ERROR' => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
+        'URL_OK' => $return_url,
+        'URL_ERROR' => $return_url,
       ),
       'order' => array(
         'MERCHANT' => $this->settings['merchant'],
@@ -161,7 +164,7 @@ class TodoPagoConnector {
     'CSBTCITY'=>'CABA', //Ciudad de facturación, MANDATORIO.
     'CSBTCOUNTRY'=>'AR', //País de facturación. MANDATORIO. Código ISO. (http://apps.cybersource.com/library/documentation/sbc/quickref/countries_alpha_list.pdf)
     'CSBTCUSTOMERID'=>$GLOBALS['user']->uid, //Identificador del usuario al que se le emite la factura. MANDATORIO. No puede contener un correo electrónico.
-    'CSBTIPADDRESS'=>$_SERVER['REMOTE_ADDRESS'], //IP de la PC del comprador. MANDATORIO.
+    'CSBTIPADDRESS'=>ip_address(), //IP de la PC del comprador. MANDATORIO.
     'CSBTEMAIL'=>$customer_email, //Mail del usuario al que se le emite la factura. MANDATORIO.
     'CSBTFIRSTNAME'=>'Cristian' ,//Nombre del usuario al que se le emite la factura. MANDATORIO.
     'CSBTLASTNAME'=>'Segarra', //Apellido del usuario al que se le emite la factura. MANDATORIO.
@@ -221,7 +224,7 @@ class TodoPagoConnector {
 
     $transaction = commerce_payment_transaction_new('commerce_todopago', $wrapper->order_number->value());
     $transaction->instance_id = ((!empty($this->settings['instance_id'])) ? ($this->settings['instance_id']) : (''));
-    $transaction->remote_id = $authorize_request['RequestKey'];
+    $transaction->remote_id = $operation_id;
     $transaction->amount = commerce_currency_decimal_to_amount($todopago_info['order']['AMOUNT'], $currency_code);
     $transaction->currency_code = $currency_code;
     $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
@@ -252,15 +255,15 @@ class TodoPagoConnector {
    */
   public function update_status(&$transaction) {
     //loguear en commerce_todopago_queries
-    $pp= $this->todopago->getStatus(array('MERCHANT'=>$this->settings['merchant'], 'OPERATIONID'=>$transaction->data['order']['OPERATIONID']));
+    $pp= $this->todopago->getStatus(array('MERCHANT'=>$this->settings['merchant'], 'OPERATIONID'=>$transaction->remote_id));
     drupal_set_message('getStatus');
     drupal_set_message(print_r($pp, true));
 
     $optionsGAA = array(
       'Security' => $this->settings['security'],
       'Merchant'  => $this->settings['merchant'],
-      'RequestKey' => $transaction->remote_id,
-      'AnswerKey' => $transaction->remote_id,
+      'RequestKey' => $transaction->data['authorize_request']['RequestKey'],
+      'AnswerKey' => $transaction->data['answer_key'],
     );
 
     $pp1 = $this->todopago->getAuthorizeAnswer($optionsGAA);
