@@ -84,8 +84,17 @@ function commerce_todopago_default_settings() {
 function commerce_todopago_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
   $form = array();
 
+  $image_title = t('(Continue with checkout to complete payment via Todo Pago.)');
+  $image_variables = array(
+    'path' => drupal_get_path('module', 'commerce_todopago') . '/images/payment-methods.jpg',
+    'title' => $image_title,
+    'alt' => $image_title,
+    'attributes' => array(
+      'class' => array('commerce-todopago-icon'),
+    ),
+  );
   $form['todopago_information'] = array(
-    '#markup' => '<span class="commerce-todopago-info">' . t('(Continue with checkout to complete payment via Todo Pago.)') . '</span>',
+    '#markup' => theme('image', $image_variables),
   );
 
   return $form;
@@ -174,6 +183,8 @@ function commerce_todopago_redirect_form_validate($order, $payment_method) {
     ($transaction = commerce_todopago_payment_transaction_load($_GET['Answer'])) &&
     ($order->order_number == $transaction->order_id)
   ) {
+//    persistir Answer y ver de agregar el uniqid en algún lado para identificar bien la transacción,
+//      ya que Answer puede (y debería) no ser igual al OPERATIONID
     if (($library = libraries_load('todopago')) && !empty($library['loaded'])) {
       $todopago = new TodoPagoConnector($payment_method['settings']);
 

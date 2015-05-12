@@ -156,7 +156,7 @@ class TodoPagoConnector {
         'OPERATIONID' => $operation_id,
         'CURRENCYCODE' => self::currency_code($currency_code),
         'AMOUNT' => $amount,
-        'EMAILCLIENTE' => $customer_email,
+        'CUSTOMEREMAIL' => $customer_email,
 
     'CSBTCITY'=>'CABA', //Ciudad de facturación, MANDATORIO.
     'CSBTCOUNTRY'=>'AR', //País de facturación. MANDATORIO. Código ISO. (http://apps.cybersource.com/library/documentation/sbc/quickref/countries_alpha_list.pdf)
