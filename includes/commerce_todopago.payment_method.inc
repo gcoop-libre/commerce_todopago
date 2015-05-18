@@ -48,6 +48,20 @@ function commerce_todopago_settings_form($settings = array()) {
     '#default_value' => $settings['security'],
     '#required' => TRUE,
   );
+  $form['category'] = array(
+    '#type' => 'select',
+    '#title' => t('Commerce category'),
+    '#description' => t('The category of the company\'s bussiness in Todo Pago\'s system.'),
+    '#options' => array(
+      'retail' => t('Retail'),
+      'travel' => t('Travel'),
+      'services' => t('Services'),
+      'digital_goods' => t('Digital goods'),
+      'ticketing' => t('Ticketing'),
+    ),
+    '#default_value' => $settings['category'],
+    '#required' => TRUE,
+  );
   $form['server'] = array(
     '#type' => 'radios',
     '#title' => t('Todo Pago\'s server'),
@@ -73,6 +87,7 @@ function commerce_todopago_default_settings() {
     'allow_supported_currencies' => FALSE,
     'authorization' => '',
     'security' => '',
+    'category' => 'retail',
     'server' => 'sandbox',
   );
 }
