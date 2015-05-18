@@ -287,8 +287,7 @@ class TodoPagoConnector {
       (empty($authorize_request['StatusCode'])) ||
       (empty($authorize_request['URL_Request'])) ||
       (empty($authorize_request['RequestKey'])) ||
-      (empty($authorize_request['PublicRequestKey'])) ||
-      ($authorize_request['StatusCode'] != -1)
+      ($authorize_request['StatusCode'] != TODOPAGO_STATUSCODE_APPROVED)
     ) {
       throw new Exception(t('There was a problem connecting with Todo Pago. Try again later.'));
     }
