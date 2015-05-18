@@ -56,61 +56,6 @@ function commerce_todopago_menu() {
 }
 
 /**
- * Loads a stored query by ID.
- *
- * @param $id
- *   The ID of the query to load.
- *
- * @return
- *   The original query with some meta data related to local processing.
- */
-function commerce_todopago_query_load($id) {
-  return db_select('commerce_todopago_queries', 'ctq')
-    ->fields('ctq')
-    ->condition('ctq.query_id', $id)
-    ->execute()
-    ->fetchAssoc();
-}
-
-/**
- * Saves a query with some meta data related to local processing.
- *
- * @param $query
- *   A query array with additional parameters for the order_id and Commerce
- *     Payment transaction_id associated with the query.
- *
- * @return
- *   The operation performed by drupal_write_record() on save; since the query is
- *     received by reference, it will also contain the serial numeric query_id
- *     used locally.
- */
-function commerce_todopago_query_save(&$query) {
-  if (!empty($query['query_id']) && commerce_todopago_query_load($query['query_id'])) {
-    $query['changed'] = REQUEST_TIME;
-
-    return drupal_write_record('commerce_todopago_queries', $query, 'query_id');
-  }
-  else {
-    $query['created'] = REQUEST_TIME;
-    $query['changed'] = REQUEST_TIME;
-
-    return drupal_write_record('commerce_todopago_queries', $query);
-  }
-}
-
-/**
- * Deletes a stored query by ID.
- *
- * @param $id
- *   The ID of the query to delete.
- */
-function commerce_todopago_query_delete($id) {
-  db_delete('commerce_todopago_queries')
-    ->condition('query_id', $id)
-    ->execute();
-}
-
-/**
  * Loads the payment transaction matching the Todo Pago's transaction ID.
  *
  * @param $remote_id
