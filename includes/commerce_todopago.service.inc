@@ -6,6 +6,29 @@
  */
 
 /**
+ * Status codes from Todo Pago
+ */
+define('TODOPAGO_STATUSCODE_APPROVED', -1);
+define('TODOPAGO_STATUSCODE_NO_INFORMATION', 0);
+define('TODOPAGO_STATUSCODE_REJECTED', 5);
+define('TODOPAGO_STATUSCODE_ACCREDITED', 6);
+define('TODOPAGO_STATUSCODE_CANCELLED', 7);
+define('TODOPAGO_STATUSCODE_REFUNDED', 9);
+define('TODOPAGO_STATUSCODE_CONFIRMED_REFUND', 10);
+define('TODOPAGO_STATUSCODE_PRE_AUTHORIZED', 11);
+define('TODOPAGO_STATUSCODE_OVERDUE', 12);
+define('TODOPAGO_STATUSCODE_PENDING_ACCREDITATION', 13);
+define('TODOPAGO_STATUSCODE_PENDING_REFUND', 15);
+define('TODOPAGO_STATUSCODE_REJECTED_NO_AUTHENTICATION', 24);
+define('TODOPAGO_STATUSCODE_REJECTED_INVALID_DATA', 25);
+define('TODOPAGO_STATUSCODE_REJECTED_NO_VALIDATED', 32);
+define('TODOPAGO_STATUSCODE_TIMEOUT', 38);
+define('TODOPAGO_STATUSCODE_INVALID_TRANSACTION', 404);
+define('TODOPAGO_STATUSCODE_INVALID_ACCOUNT', 702);
+define('TODOPAGO_STATUSCODE_PARAMETRIZATION_ERROR', 720);
+define('TODOPAGO_STATUSCODE_SYSTEM_ERROR', 999);
+
+/**
  * Todo Pago connector using the drupal stored credentials.
  */
 class TodoPagoConnector {
@@ -113,6 +136,54 @@ class TodoPagoConnector {
   public static function format_price_amount($amount, $currency_code) {
     $rounded_amount = commerce_currency_round($amount, commerce_currency_load($currency_code));
     return number_format(commerce_currency_amount_to_decimal($rounded_amount, $currency_code), 2, '.', '');
+  }
+
+  /**
+   * Returns the Commerce Status equivalent for a Todo Pago status code
+   *
+   * @param $status_code
+   *   Todo Pago status code
+   *
+   * @return
+   *   Commerce payment status code
+   */
+  private function payment_status_code($status_code) {
+    switch ($status_code) {
+      case TODOPAGO_STATUSCODE_INVALID_ACCOUNT:
+      case TODOPAGO_STATUSCODE_INVALID_TRANSACTION:
+      case TODOPAGO_STATUSCODE_PARAMETRIZATION_ERROR:
+        $payment_status = '';
+        break;
+
+      case TODOPAGO_STATUSCODE_NO_INFORMATION:
+      case TODOPAGO_STATUSCODE_PENDING_ACCREDITATION:
+      case TODOPAGO_STATUSCODE_PENDING_REFUND:
+      case TODOPAGO_STATUSCODE_PRE_AUTHORIZED:
+        $payment_status = COMMERCE_PAYMENT_STATUS_PENDING;
+        break;
+
+      case TODOPAGO_STATUSCODE_ACCREDITED:
+      case TODOPAGO_STATUSCODE_APPROVED:
+        $payment_status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+        break;
+
+      case TODOPAGO_STATUSCODE_CANCELLED:
+      case TODOPAGO_STATUSCODE_CONFIRMED_REFUND:
+      case TODOPAGO_STATUSCODE_OVERDUE:
+      case TODOPAGO_STATUSCODE_REFUNDED:
+      case TODOPAGO_STATUSCODE_REJECTED:
+      case TODOPAGO_STATUSCODE_REJECTED_INVALID_DATA:
+      case TODOPAGO_STATUSCODE_REJECTED_NO_AUTHENTICATION:
+      case TODOPAGO_STATUSCODE_REJECTED_NO_VALIDATED:
+      case TODOPAGO_STATUSCODE_SYSTEM_ERROR:
+      case TODOPAGO_STATUSCODE_TIMEOUT:
+      default:
+        $payment_status = COMMERCE_PAYMENT_STATUS_FAILURE;
+        break;
+
+    }
+
+    return $payment_status;
   }
 
   /**
@@ -254,21 +325,63 @@ class TodoPagoConnector {
    *   void
    */
   public function update_status(&$transaction) {
-    //loguear en commerce_todopago_queries
-    $pp= $this->todopago->getStatus(array('MERCHANT'=>$this->settings['merchant'], 'OPERATIONID'=>$transaction->remote_id));
-    drupal_set_message('getStatus');
-    drupal_set_message(print_r($pp, true));
+    if (
+      (!empty($transaction->data['authorize_request']['RequestKey'])) &&
+      (!empty($transaction->data['answer_key']))
+    ) {
+      $get_authorize_answer_info = array(
+        'Security' => $this->settings['security'],
+        'Merchant'  => $this->settings['merchant'],
+        'RequestKey' => $transaction->data['authorize_request']['RequestKey'],
+        'AnswerKey' => $transaction->data['answer_key'],
+      );
 
-    $optionsGAA = array(
-      'Security' => $this->settings['security'],
-      'Merchant'  => $this->settings['merchant'],
-      'RequestKey' => $transaction->data['authorize_request']['RequestKey'],
-      'AnswerKey' => $transaction->data['answer_key'],
+      $get_authorize_answer = $this->todopago->getAuthorizeAnswer($get_authorize_answer_info);
+
+      if (
+        (empty($get_authorize_answer)) ||
+        (empty($get_authorize_answer['StatusCode'])) ||
+        (!$payment_status = $this->payment_status_code($get_authorize_answer['StatusCode']))
+      ) {
+        throw new Exception(t('The transaction does not exist in Todo Pago.'));
+      }
+
+      $transaction->status = $payment_status;
+      $transaction->remote_status = $get_authorize_answer['StatusCode'];
+      $transaction->message = $get_authorize_answer['StatusMessage'];
+
+      if (empty($transaction->payload['get_authorize_answer'])) {
+        $transaction->payload['get_authorize_answer'];
+      }
+      $transaction->payload['get_authorize_answer'][REQUEST_TIME] = $get_authorize_answer;
+    }
+
+    $get_status_info = array(
+      'MERCHANT' => $this->settings['merchant'],
+      'OPERATIONID' => $transaction->remote_id,
     );
 
-    $pp1 = $this->todopago->getAuthorizeAnswer($optionsGAA);
-    drupal_set_message('getAuthorizeAnswer');
-    drupal_set_message(print_r($pp1, true));
+    $get_status = $this->todopago->getStatus($get_status_info);
+
+    if (
+      (empty($get_status)) ||
+      (empty($get_status['Operations'])) ||
+      (empty($get_status['Operations']['RESULTCODE'])) ||
+      (!$payment_status = $this->payment_status_code($get_status['Operations']['RESULTCODE']))
+    ) {
+      throw new Exception(t('The transaction does not exist in Todo Pago.'));
+    }
+
+    $transaction->status = $payment_status;
+    $transaction->remote_status = $get_status['Operations']['RESULTCODE'];
+    $transaction->message = $get_status['Operations']['RESULTMESSAGE'];
+
+    if (empty($transaction->payload['get_status'])) {
+      $transaction->payload['get_status'];
+    }
+    $transaction->payload['get_status'][REQUEST_TIME] = $get_status;
+
+    commerce_payment_transaction_save($transaction);
   }
 }
 
