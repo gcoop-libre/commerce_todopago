@@ -46,6 +46,9 @@ function commerce_todopago_requirements($phase) {
       $requirements['todopago_library']['value'] = t('Version: @version', array('@version' => $library['version']));
     }
 
+    $billing_address = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'billing');
+    $shipping_address = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'shipping');
+
     /**
      * Addressfield: Name full
      */
@@ -56,9 +59,6 @@ function commerce_todopago_requirements($phase) {
       'severity' => REQUIREMENT_OK,
     );
 
-    $billing_address = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'billing');
-    $shipping_address = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'shipping');
-
     if (
       (empty($billing_address)) ||
       (empty($shipping_address)) ||
@@ -68,6 +68,44 @@ function commerce_todopago_requirements($phase) {
       $requirements['addressfield_name_full']['value'] = t('Disabled');
       $requirements['addressfield_name_full']['description'] = t('Todo Pago uses separate fields for the first name and the last name of the billing and shipping customer profile.');
       $requirements['addressfield_name_full']['severity'] = REQUIREMENT_WARNING;
+    }
+
+    /**
+     * Addressfield: Phone
+     */
+    $requirements['addressfield_phone'] = array(
+      'title' => t('Addressfield: Phone'),
+      'value' => t('Enabled'),
+      'description' => '',
+      'severity' => REQUIREMENT_OK,
+    );
+
+    if (
+      (empty($billing_address)) ||
+      (empty($shipping_address)) ||
+      (empty($billing_address['widget']['settings']['format_handlers']['phone'])) ||
+      (empty($shipping_address['widget']['settings']['format_handlers']['phone']))
+    ) {
+      $requirements['addressfield_phone']['value'] = t('Disabled');
+      $requirements['addressfield_phone']['description'] = t('Todo Pago needs the phone number to be included in the billing and shipping customer profile.');
+      $requirements['addressfield_phone']['severity'] = REQUIREMENT_WARNING;
+    } else {
+      if (
+        (empty($billing_address['widget']['settings']['phone_number_fields'])) ||
+        (
+          (array_filter($billing_address['widget']['settings']['phone_number_fields'])) &&
+          (empty($billing_address['widget']['settings']['phone_number_fields']['phone']))
+        ) ||
+        (empty($shipping_address['widget']['settings']['phone_number_fields'])) ||
+        (
+          (array_filter($shipping_address['widget']['settings']['phone_number_fields'])) &&
+          (empty($shipping_address['widget']['settings']['phone_number_fields']['phone']))
+        )
+      ) {
+        $requirements['addressfield_phone']['value'] = t('Disabled');
+        $requirements['addressfield_phone']['description'] = t('Todo Pago needs at least the phone number to be included in the billing and shipping customer profile.');
+        $requirements['addressfield_phone']['severity'] = REQUIREMENT_WARNING;
+      }
     }
   }
 
@@ -82,12 +120,18 @@ function commerce_todopago_enable() {
     if (empty($billing_address['widget']['settings']['format_handlers']['name-full'])) {
       $billing_address['widget']['settings']['format_handlers']['name-full'] = 'name-full';
     }
+    if (empty($billing_address['widget']['settings']['format_handlers']['phone'])) {
+      $billing_address['widget']['settings']['format_handlers']['phone'] = 'phone';
+    }
 
     field_update_instance($billing_address);
   }
   if ($shipping_address = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'shipping')) {
     if (empty($shipping_address['widget']['settings']['format_handlers']['name-full'])) {
       $shipping_address['widget']['settings']['format_handlers']['name-full'] = 'name-full';
+    }
+    if (empty($shipping_address['widget']['settings']['format_handlers']['phone'])) {
+      $shipping_address['widget']['settings']['format_handlers']['phone'] = 'phone';
     }
 
     field_update_instance($shipping_address);
