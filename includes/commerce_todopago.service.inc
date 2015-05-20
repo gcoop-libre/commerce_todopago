@@ -198,10 +198,10 @@ class TodoPagoConnector {
   public function create_order_form($order) {
     $form = array();
 
-    $wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
 
     $currency_code = $this->settings['currency_code'];
-    $order_currency_code = $wrapper->commerce_order_total->currency_code->value();
+    $order_currency_code = $order_wrapper->commerce_order_total->currency_code->value();
 
     if (
       (!empty($settings['allow_supported_currencies'])) &&
@@ -213,8 +213,8 @@ class TodoPagoConnector {
     $hash = uniqid();
 
     $operation_id = commerce_todopago_remote_id($order, $hash);
-    $amount = $this->format_price_amount(commerce_currency_convert($wrapper->commerce_order_total->amount->value(), $order_currency_code, $currency_code), $currency_code);
-    $customer_email = $wrapper->mail->value();
+    $amount = $this->format_price_amount(commerce_currency_convert($order_wrapper->commerce_order_total->amount->value(), $order_currency_code, $currency_code), $currency_code);
+    $customer_email = $order_wrapper->mail->value();
     $return_url = url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'] . '/' . $hash, array('absolute' => TRUE));
 
     $todopago_info = array(
@@ -231,54 +231,92 @@ class TodoPagoConnector {
         'CURRENCYCODE' => self::currency_code($currency_code),
         'AMOUNT' => $amount,
         'EMAILCLIENTE' => $customer_email,
-
-    'CSBTCITY'=>'CABA', //Ciudad de facturación, MANDATORIO.
-    'CSBTCOUNTRY'=>'AR', //País de facturación. MANDATORIO. Código ISO. (http://apps.cybersource.com/library/documentation/sbc/quickref/countries_alpha_list.pdf)
-    'CSBTCUSTOMERID'=>$GLOBALS['user']->uid, //Identificador del usuario al que se le emite la factura. MANDATORIO. No puede contener un correo electrónico.
-    'CSBTIPADDRESS'=>ip_address(), //IP de la PC del comprador. MANDATORIO.
-    'CSBTEMAIL'=>$customer_email, //Mail del usuario al que se le emite la factura. MANDATORIO.
-    'CSBTFIRSTNAME'=>'Cristian' ,//Nombre del usuario al que se le emite la factura. MANDATORIO.
-    'CSBTLASTNAME'=>'Segarra', //Apellido del usuario al que se le emite la factura. MANDATORIO.
-    'CSBTPHONENUMBER'=>'541148554390', //Teléfono del usuario al que se le emite la factura. No utilizar guiones, puntos o espacios. Incluir código de país. MANDATORIO.
-    'CSBTPOSTALCODE'=>' C1010AAP', //Código Postal de la dirección de facturación. MANDATORIO.
-    'CSBTSTATE'=>'B', //Provincia de la dirección de facturación. MANDATORIO. Ver tabla anexa de provincias.
-    'CSBTSTREET1'=>'Cerrito 740', //Domicilio de facturación (calle y nro). MANDATORIO.
-    'CSBTSTREET2'=>'Piso 8', //Complemento del domicilio. (piso, departamento). NO MANDATORIO.
-    'CSPTCURRENCY'=>'ARS', //Moneda. MANDATORIO.
-    'CSPTGRANDTOTALAMOUNT'=>$amount, //Con decimales opcional usando el puntos como separador de decimales. No se permiten comas, ni como separador de miles ni como separador de decimales. MANDATORIO. (Ejemplos:$125,38-> 125.38 $12-> 12 o 12.00)
-    'CSMDD6'=>'Web', // Canal de venta. NO MANDATORIO. (Valores posibles: Web, Mobile, Telefonica)
-    'CSMDD7'=>'', // Fecha registro comprador(num Dias). NO MANDATORIO.
-    'CSMDD8'=>'N', //Usuario Guest? (Y/N). En caso de ser Y, el campo CSMDD9 no deberá enviarse. NO MANDATORIO.
-    'CSMDD9'=>'', //Customer password Hash: criptograma asociado al password del comprador final. NO MANDATORIO.
-    'CSMDD10'=>'', //Histórica de compras del comprador (Num transacciones). NO MANDATORIO.
-    'CSMDD11'=>'', //Customer Cell Phone. NO MANDATORIO.
-
-    'STCITY'=>'CABA', //Ciudad de enví­o de la orden. MANDATORIO
-    'STCOUNTRY'=>'AR', //País de envío de la orden. MANDATORIO.
-    'STEMAIL'=>$customer_email, //Mail del destinatario, MANDATORIO.
-    'STFIRSTNAME'=>'Cristian', //Nombre del destinatario. MANDATORIO.
-    'STLASTNAME'=>'Segarra', //Apellido del destinatario. MANDATORIO.
-    'STPHONENUMBER'=>'541148554390', //Número de teléfono del destinatario. MANDATORIO.
-    'STPOSTALCODE'=>'1414', //Código postal del domicilio de envío. MANDATORIO.
-    'STSTATE'=>'D', //Provincia de envío. MANDATORIO. Son de 1 caracter
-    'STSTREET1'=>'San Martín 123', //Domicilio de envío. MANDATORIO.
-    'STSTREET2'=>'San Luis', //Localidad de envío. NO MANDATORIO.
-    'CSMDD12'=>'',//Shipping DeadLine (Num Dias). NO MADATORIO.
-    'CSMDD13'=>'',//Método de Despacho. NO MANDATORIO
-    'CSMDD14'=>'',//Customer requires Tax Bill ? (Y/N). NO MANDATORIO.
-    'CSMDD15'=>'',//Customer Loyality Number. NO MANDATORIO.
-    'CSMDD16'=>'',//Promotional / Coupon Code. NO MANDATORIO.
-    //Retail: datos a enviar por cada producto, los valores deben estar separado con #:
-    'CSITPRODUCTCODE'=>'electronic_good', //Código de producto. CONDICIONAL. Valores posibles(adult_content;coupon;default;electronic_good;electronic_software;gift_certificate;handling_only;service;shipping_and_handling;shipping_only;subscription)
-    'CSITPRODUCTDESCRIPTION'=>'NOTEBOOK L845 SP4304LA DF TOSHIBA', //Descripción del producto. CONDICIONAL.
-    'CSITPRODUCTNAME'=>'NOTEBOOK L845 SP4304LA DF TOSHIBA', //Nombre del producto. CONDICIONAL.
-    'CSITPRODUCTSKU'=>'LEVJNSL36GN', //Código identificador del producto. CONDICIONAL.
-    'CSITTOTALAMOUNT'=>$amount, //CSITTOTALAMOUNT=CSITUNITPRICE*CSITQUANTITY "999999[.CC]" Con decimales opcional usando el puntos como separador de decimales. No se permiten comas, ni como separador de miles ni como separador de decimales. CONDICIONAL.
-    'CSITQUANTITY'=>'1', //Cantidad del producto. CONDICIONAL.
-    'CSITUNITPRICE'=>$amount, //Formato Idem CSITTOTALAMOUNT. CONDICIONAL.
-
+        /**
+         * Fraud prevention
+         */
+        'CSBTCITY' => '',
+        'CSBTCOUNTRY' => '',
+        'CSBTCUSTOMERID' => $order_wrapper->uid->value(),
+        'CSBTIPADDRESS' => ip_address(),
+        'CSBTEMAIL' => $customer_email,
+        'CSBTFIRSTNAME' => '',
+        'CSBTLASTNAME' => '',
+        'CSBTPHONENUMBER' => '',
+        'CSBTPOSTALCODE' => '',
+        'CSBTSTATE' => '',
+        'CSBTSTREET1' => '',
+        'CSPTCURRENCY' => $currency_code,
+        'CSPTGRANDTOTALAMOUNT' => $amount,
       ),
     );
+
+    /**
+     * Fraud prevention: Generic fields
+     */
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->locality)) {
+      $todopago_info['order']['CSBTCITY'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->locality->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->country)) {
+      $todopago_info['order']['CSBTCOUNTRY'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->country->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->first_name)) {
+      $todopago_info['order']['CSBTFIRSTNAME'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->first_name->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->last_name)) {
+      $todopago_info['order']['CSBTLASTNAME'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->last_name->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->phone_number)) {
+      $todopago_info['order']['CSBTPHONENUMBER'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->phone_number->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->postal_code)) {
+      $todopago_info['order']['CSBTPOSTALCODE'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->postal_code->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->administrative_area)) {
+      $todopago_info['order']['CSBTSTATE'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->administrative_area->value();
+    }
+    if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->thoroughfare)) {
+      $todopago_info['order']['CSBTSTREET1'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->thoroughfare->value();
+    }
+
+    /**
+     * Fraud prevention: Specific fields
+     */
+    if ($this->settings['category'] == 'retail') {
+      $todopago_info['order']['CSSTEMAIL'] = $customer_email;
+
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->locality)) {
+        $todopago_info['order']['CSSTCITY'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->locality->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->country)) {
+        $todopago_info['order']['CSSTCOUNTRY'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->country->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->first_name)) {
+        $todopago_info['order']['CSSTFIRSTNAME'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->first_name->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->last_name)) {
+        $todopago_info['order']['CSSTLASTNAME'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->last_name->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->phone_number)) {
+        $todopago_info['order']['CSSTPHONENUMBER'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->phone_number->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->postal_code)) {
+        $todopago_info['order']['CSSTPOSTALCODE'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->postal_code->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->administrative_area)) {
+        $todopago_info['order']['CSSTSTATE'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->administrative_area->value();
+      }
+      if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->thoroughfare)) {
+        $todopago_info['order']['CSSTSTREET1'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->thoroughfare->value();
+      }
+    } elseif ($this->settings['category'] == 'travel') {
+      // TODO
+    } elseif ($this->settings['category'] == 'services') {
+      // TODO
+    } elseif ($this->settings['category'] == 'digital_goods') {
+      // TODO
+    } elseif ($this->settings['category'] == 'ticketing') {
+      // TODO
+    }
 
     $authorize_request = $this->todopago->sendAuthorizeRequest($todopago_info['commerce'], $todopago_info['order']);
 
@@ -292,7 +330,7 @@ class TodoPagoConnector {
       throw new Exception(t('There was a problem connecting with Todo Pago. Try again later.'));
     }
 
-    $transaction = commerce_payment_transaction_new('commerce_todopago', $wrapper->order_number->value());
+    $transaction = commerce_payment_transaction_new('commerce_todopago', $order_wrapper->order_number->value());
     $transaction->instance_id = ((!empty($this->settings['instance_id'])) ? ($this->settings['instance_id']) : (''));
     $transaction->remote_id = $operation_id;
     $transaction->amount = commerce_currency_decimal_to_amount($todopago_info['order']['AMOUNT'], $currency_code);
