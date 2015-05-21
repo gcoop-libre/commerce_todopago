@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Installs the tables required by Commerce Todo Pago.
+ * Implements hooks required by Commerce Todo Pago.
  */
 
 /**
