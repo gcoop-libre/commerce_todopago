@@ -110,6 +110,13 @@ function commerce_todopago_enable() {
     if (empty($billing_address['widget']['settings']['format_handlers']['phone'])) {
       $billing_address['widget']['settings']['format_handlers']['phone'] = 'phone';
     }
+    if (
+      (empty($billing_address['widget']['settings']['phone_number_fields'])) ||
+      (empty($billing_address['widget']['settings']['phone_number_fields']['phone'])) ||
+      ($billing_address['widget']['settings']['phone_number_fields']['phone'] != 'required')
+    ) {
+      $billing_address['widget']['settings']['phone_number_fields']['phone'] = 'required';
+    }
 
     field_update_instance($billing_address);
   }
@@ -119,6 +126,13 @@ function commerce_todopago_enable() {
     }
     if (empty($shipping_address['widget']['settings']['format_handlers']['phone'])) {
       $shipping_address['widget']['settings']['format_handlers']['phone'] = 'phone';
+    }
+    if (
+      (empty($shipping_address['widget']['settings']['phone_number_fields'])) ||
+      (empty($shipping_address['widget']['settings']['phone_number_fields']['phone'])) ||
+      ($shipping_address['widget']['settings']['phone_number_fields']['phone'] != 'required')
+    ) {
+      $shipping_address['widget']['settings']['phone_number_fields']['phone'] = 'required';
     }
 
     field_update_instance($shipping_address);
