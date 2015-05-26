@@ -84,28 +84,15 @@ function commerce_todopago_requirements($phase) {
       (empty($billing_address)) ||
       (empty($shipping_address)) ||
       (empty($billing_address['widget']['settings']['format_handlers']['phone'])) ||
-      (empty($shipping_address['widget']['settings']['format_handlers']['phone']))
+      (empty($shipping_address['widget']['settings']['format_handlers']['phone'])) ||
+      (empty($billing_address['widget']['settings']['phone_number_fields']['phone'])) ||
+      (empty($shipping_address['widget']['settings']['phone_number_fields']['phone'])) ||
+      ($billing_address['widget']['settings']['phone_number_fields']['phone'] != 'required') ||
+      ($shipping_address['widget']['settings']['phone_number_fields']['phone'] != 'required')
     ) {
       $requirements['addressfield_phone']['value'] = t('Disabled');
       $requirements['addressfield_phone']['description'] = t('Todo Pago needs the phone number to be included in the billing and shipping customer profile.');
       $requirements['addressfield_phone']['severity'] = REQUIREMENT_WARNING;
-    } else {
-      if (
-        (empty($billing_address['widget']['settings']['phone_number_fields'])) ||
-        (
-          (array_filter($billing_address['widget']['settings']['phone_number_fields'])) &&
-          (empty($billing_address['widget']['settings']['phone_number_fields']['phone']))
-        ) ||
-        (empty($shipping_address['widget']['settings']['phone_number_fields'])) ||
-        (
-          (array_filter($shipping_address['widget']['settings']['phone_number_fields'])) &&
-          (empty($shipping_address['widget']['settings']['phone_number_fields']['phone']))
-        )
-      ) {
-        $requirements['addressfield_phone']['value'] = t('Disabled');
-        $requirements['addressfield_phone']['description'] = t('Todo Pago needs at least the phone number to be included in the billing and shipping customer profile.');
-        $requirements['addressfield_phone']['severity'] = REQUIREMENT_WARNING;
-      }
     }
   }
 
