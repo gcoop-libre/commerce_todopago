@@ -388,7 +388,7 @@ class TodoPagoConnector {
       $transaction->message = $get_authorize_answer['StatusMessage'];
 
       if (empty($transaction->payload['get_authorize_answer'])) {
-        $transaction->payload['get_authorize_answer'];
+        $transaction->payload['get_authorize_answer'] = array();
       }
       $transaction->payload['get_authorize_answer'][REQUEST_TIME] = $get_authorize_answer;
     }
@@ -414,7 +414,7 @@ class TodoPagoConnector {
     $transaction->message = $get_status['Operations']['RESULTMESSAGE'];
 
     if (empty($transaction->payload['get_status'])) {
-      $transaction->payload['get_status'];
+      $transaction->payload['get_status'] = array();
     }
     $transaction->payload['get_status'][REQUEST_TIME] = $get_status;
 
