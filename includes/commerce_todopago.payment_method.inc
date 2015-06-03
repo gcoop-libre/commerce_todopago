@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Implements Todo Pago payment callbakcs for use with Drupal Commerce.
+ * Implements Todo Pago payment callbacks for use with Drupal Commerce.
  */
 
 /**
