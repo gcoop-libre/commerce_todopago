@@ -56,6 +56,20 @@ function commerce_todopago_menu() {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function commerce_todopago_permission() {
+  $permissions = array();
+
+  $permissions['administer commerce_todopago settings'] = array(
+    'title' => t('Administer Todo Pago settings'),
+  );
+
+  return $permissions;
+}
+
+
+/**
  * Loads the payment transaction matching the Todo Pago's transaction ID.
  *
  * @param $remote_id
