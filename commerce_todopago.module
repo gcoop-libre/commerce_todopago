@@ -14,16 +14,16 @@ function commerce_todopago_libraries_info() {
   $libraries['todopago'] = array(
     'name' => 'Todo Pago PHP SDK',
     'vendor url' => 'http://www.todopago.com.ar',
-    'download url' => 'https://github.com/TodoPago/sdk-php',
-    'path' => 'lib',
+    'download url' => 'https://github.com/TodoPago/SDK-PHP',
+    'path' => 'TodoPago/lib',
     'version arguments' => array(
-      'file' => 'lib/TodoPago.php',
-      'pattern' => '/^define\(\'VERSION_TODOPAGO\', \'([0-9\.]+)\'\);$/',
+      'file' => 'TodoPago/lib/Sdk.php',
+      'pattern' => '/^define\(\'TODOPAGO_VERSION\', *\'([0-9\.]+)\'\);$/',
       'lines' => 10,
     ),
     'files' => array(
       'php' => array(
-        'TodoPago.php',
+        'Sdk.php',
       ),
     ),
     'integration files' => array(

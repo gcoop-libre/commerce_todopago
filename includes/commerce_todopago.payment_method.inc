@@ -62,14 +62,14 @@ function commerce_todopago_settings_form($settings = array()) {
     '#default_value' => $settings['category'],
     '#required' => TRUE,
   );
-  $form['server'] = array(
+  $form['mode'] = array(
     '#type' => 'radios',
-    '#title' => t('Todo Pago\'s server'),
+    '#title' => t('Mode'),
     '#options' => array(
-      'sandbox' => ('Sandbox - use for testing'),
-      'live' => ('Live - use for processing real transactions'),
+      'test' => ('Test - use this for testing'),
+      'prod' => ('Production - use for processing real transactions'),
     ),
-    '#default_value' => $settings['server'],
+    '#default_value' => $settings['mode'],
   );
 
   return $form;
@@ -88,7 +88,7 @@ function commerce_todopago_default_settings() {
     'authorization' => '',
     'security' => '',
     'category' => 'retail',
-    'server' => 'sandbox',
+    'mode' => 'test',
   );
 }
 

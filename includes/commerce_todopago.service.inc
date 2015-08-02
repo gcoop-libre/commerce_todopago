@@ -42,11 +42,11 @@ class TodoPagoConnector {
     if (
       (empty($settings)) ||
       (!is_array($settings)) ||
-      (empty($settings['server'])) ||
       (empty($settings['merchant'])) ||
       (empty($settings['authorization'])) ||
       (empty($settings['security'])) ||
-      (empty($settings['currency_code']))
+      (empty($settings['currency_code'] ||
+      !in_array(array('test', 'prod'), $settings['mode'])))
     ) {
       throw new Exception(t('Todo Pago is not configured for use.'));
     }
@@ -56,42 +56,8 @@ class TodoPagoConnector {
       'Authorization' => $this->settings['authorization'],
       'user_agent' => 'Commerce_TodoPago',
     );
-    $wsdl = $this->get_wsdl($this->settings['server']);
-    $end_point = $this->get_end_point($this->settings['server']);
 
-    $this->todopago = new TodoPago($http_header, $wsdl, $end_point);
-  }
-
-  /**
-   * Returns the URL to the specified Todo Pago's API server.
-   *
-   * @param $server
-   *   Either sandbox or live indicating which server to get the URL for.
-   *
-   * @return
-   *   The URL to use to submit requests to the Todo Pago's API server.
-   */
-  private function get_end_point($server) {
-    switch ($server) {
-      case 'sandbox':
-        return 'https://50.19.97.101:8243/services/';
-      case 'live':
-        return 'https://50.19.97.101:8243/services/';
-    }
-  }
-
-  /**
-   * Returns the Todo Pago's WSDLs.
-   *
-   * @return
-   *   An array with the Todo Pago's WSDLs.
-   */
-  private function get_wsdl($server) {
-    return array(
-      'Authorize' => $this->get_end_point($server) . 'Authorize?wsdl',
-      'Operations' => $this->get_end_point($server) . 'Operations?wsdl',
-      'PaymentMethods' => $this->get_end_point($server) . 'PaymentMethods?wsdl',
-    );
+    $this->todopago = new TodoPago\Sdk($http_header, $this->settings['mode']);
   }
 
   /**

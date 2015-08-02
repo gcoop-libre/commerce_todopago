@@ -15,8 +15,8 @@ First download and enable the module as usual.
 
 Then you need to get the [Todo Pago PHP SDK][2]. Download it and place it in one
 of the possible libraries directories (i.e. sites/all/libraries) and it will be
-detected. If you use [drush make][3] (you should), then copy the contents of
-todopago.make.example in your makefile and you are good to go.
+detected. If you use [drush make][3] (you should) it will be automatically
+downloaded using the included commerce\_todopago.make.
 
 
 [0]: http://www.todopago.com.ar                  "Todo Pago"
