@@ -293,7 +293,7 @@ class TodoPagoConnector {
       (empty($authorize_request['RequestKey'])) ||
       ($authorize_request['StatusCode'] != TODOPAGO_STATUSCODE_APPROVED)
     ) {
-      throw new Exception(t('There was a problem connecting with Todo Pago. Try again later.'));
+      throw new Exception(t('Could not get authorize request: !response', array('!response' => print_r($authorize_request, TRUE))));
     }
 
     $transaction = commerce_payment_transaction_new('commerce_todopago', $order_wrapper->order_number->value());
@@ -346,7 +346,7 @@ class TodoPagoConnector {
         (empty($get_authorize_answer['StatusCode'])) ||
         (!$payment_status = $this->payment_status_code($get_authorize_answer['StatusCode']))
       ) {
-        throw new Exception(t('The transaction does not exist in Todo Pago.'));
+        throw new Exception(t('Could not get authorize answer: !response.', array('!response' => print_r($get_authorize_answer, TRUE))));
       }
 
       $transaction->status = $payment_status;
@@ -372,7 +372,7 @@ class TodoPagoConnector {
       (empty($get_status['Operations']['RESULTCODE'])) ||
       (!$payment_status = $this->payment_status_code($get_status['Operations']['RESULTCODE']))
     ) {
-      throw new Exception(t('The transaction does not exist in Todo Pago.'));
+      throw new Exception(t('Could not get transaction status from TodoPago: !response.', array('!response' => print_r($get_status, TRUE))));
     }
 
     $transaction->status = $payment_status;

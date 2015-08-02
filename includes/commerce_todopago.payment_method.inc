@@ -167,7 +167,7 @@ function commerce_todopago_order_form($form, &$form_state, $order, $settings) {
 
       watchdog('commerce_todopago', 'There was an error with the payment for Order Nr. @order_number: %error', array('@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
 
-      drupal_set_message($e->getMessage(), 'error');
+      drupal_set_message(t('There was a problem connecting with Todo Pago. Try again later.'), 'error');
 
       $form['submit'] = array(
         '#type' => 'submit',
