@@ -232,7 +232,8 @@ class TodoPagoConnector {
       $todopago_info['order']['CSBTLASTNAME'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->last_name->value();
     }
     if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->phone_number)) {
-      $todopago_info['order']['CSBTPHONENUMBER'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->phone_number->value();
+      $phone_number = $order_wrapper->commerce_customer_billing->commerce_customer_address->phone_number->value();
+      $todopago_info['order']['CSBTPHONENUMBER'] = $this->formatPhoneNumber($phone_number);
     }
     if (isset($order_wrapper->commerce_customer_billing->commerce_customer_address->postal_code)) {
       $todopago_info['order']['CSBTPOSTALCODE'] = $order_wrapper->commerce_customer_billing->commerce_customer_address->postal_code->value();
@@ -263,7 +264,8 @@ class TodoPagoConnector {
         $todopago_info['order']['CSSTLASTNAME'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->last_name->value();
       }
       if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->phone_number)) {
-        $todopago_info['order']['CSSTPHONENUMBER'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->phone_number->value();
+        $phone_number = $order_wrapper->commerce_customer_shipping->commerce_customer_address->phone_number->value();
+        $todopago_info['order']['CSSTPHONENUMBER'] = $this->formatPhoneNumber($phone_number);
       }
       if (isset($order_wrapper->commerce_customer_shipping->commerce_customer_address->postal_code)) {
         $todopago_info['order']['CSSTPOSTALCODE'] = $order_wrapper->commerce_customer_shipping->commerce_customer_address->postal_code->value();
@@ -385,6 +387,17 @@ class TodoPagoConnector {
     $transaction->payload['get_status'][REQUEST_TIME] = $get_status;
 
     commerce_payment_transaction_save($transaction);
+  }
+
+  /**
+   * Returns the phone number in the format expected by TodoPago.
+   *
+   * @param $phone_number
+   *   The phone number to format
+   */
+  public function formatPhoneNumber($phone_number) {
+    // TodoPago complains if the phone contains non numeric characters.
+    return preg_replace('/[^0-9]/', '', $phone_number);
   }
 }
 
