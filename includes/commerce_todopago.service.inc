@@ -45,8 +45,8 @@ class TodoPagoConnector {
       (empty($settings['merchant'])) ||
       (empty($settings['authorization'])) ||
       (empty($settings['security'])) ||
-      (empty($settings['currency_code'] ||
-      !in_array(array('test', 'prod'), $settings['mode'])))
+      (empty($settings['currency_code'])) ||
+      (!in_array(array('test', 'prod'), $settings['mode']))
     ) {
       throw new Exception(t('Todo Pago is not configured for use.'));
     }
