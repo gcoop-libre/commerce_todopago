@@ -37,7 +37,7 @@ function commerce_todopago_settings_form($settings = array()) {
   $form['authorization'] = array(
     '#type' => 'textfield',
     '#title' => t('Authorization code'),
-    '#description' => t('The authorizarion code for the company in Todo Pago\'s system.'),
+    '#description' => t('The authorization code for the company in Todo Pago\'s system.'),
     '#default_value' => $settings['authorization'],
     '#required' => TRUE,
   );
@@ -101,7 +101,7 @@ function commerce_todopago_default_settings() {
 function commerce_todopago_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
   $form = array();
 
-  $image_title = t('(Continue with checkout to complete payment via Todo Pago.)');
+  $image_title = t('Continue with checkout to complete payment via Todo Pago');
   $image_variables = array(
     'path' => drupal_get_path('module', 'commerce_todopago') . '/images/payment-methods.jpg',
     'title' => $image_title,

@@ -43,8 +43,8 @@ function commerce_todopago_libraries_info() {
  */
 function commerce_todopago_menu() {
   $items['admin/commerce/config/todopago'] = array(
-    'title' => t('Todo Pago'),
-    'description' => t('Configure some global options of Todo Pago.'),
+    'title' => 'Todo Pago',
+    'description' => 'Configure some global options of Todo Pago.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_todopago_admin_settings'),
     'file' => 'includes/commerce_todopago.admin.inc',

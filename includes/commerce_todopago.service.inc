@@ -405,7 +405,7 @@ class TodoPagoConnector {
       (empty($get_status['Operations']['RESULTCODE'])) ||
       (!$payment_status = $this->payment_status_code($get_status['Operations']['RESULTCODE']))
     ) {
-      throw new Exception(t('Could not get transaction status from TodoPago: !response.', array('!response' => print_r($get_status, TRUE))));
+      throw new Exception(t('Could not get transaction status from Todo Pago: !response.', array('!response' => print_r($get_status, TRUE))));
     }
 
     $transaction->status = $payment_status;
