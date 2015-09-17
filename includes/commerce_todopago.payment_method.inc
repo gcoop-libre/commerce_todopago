@@ -66,11 +66,11 @@ function commerce_todopago_settings_form($settings = array()) {
     '#type' => 'radios',
     '#title' => t('Mode'),
     '#options' => array(
-      'test' => ('Development'),
-      'prod' => ('Production'),
+      'test' => t('Development'),
+      'prod' => t('Production'),
     ),
-    'test' => array('#description' => 'Use for testing the integration.'),
-    'prod' => array('#description' => 'Use for processing real transactions.'),
+    'test' => array('#description' => t('Use for testing the integration.')),
+    'prod' => array('#description' => t('Use for processing real transactions.')),
     '#default_value' => $settings['mode'],
   );
 
