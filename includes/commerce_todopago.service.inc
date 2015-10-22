@@ -264,7 +264,7 @@ class TodoPagoConnector {
         $item_price_amount = commerce_currency_convert($item_price['amount'], $item_price['currency_code'], $currency_code);
         $unit_price[] = $this->format_price_amount($item_price_amount, $currency_code);
         $item_quantity = $line_item_wrapper->quantity->value();
-        $quantity[] = $item_quantity;
+        $quantity[] = intval($item_quantity);
         $total_amount[] = $this->format_price_amount($item_price_amount * $item_quantity, $currency_code);
       }
     }
