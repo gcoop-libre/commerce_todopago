@@ -248,6 +248,7 @@ class TodoPagoConnector {
     /**
      * Fraud prevention: line item fields
      */
+    $product_code = array();
     $product_description = array();
     $product_name = array();
     $product_sku = array();
@@ -256,6 +257,7 @@ class TodoPagoConnector {
     $total_amount = array();
     foreach ($order_wrapper->commerce_line_items as $delta => $line_item_wrapper) {
       if (in_array($line_item_wrapper->type->value(), commerce_product_line_item_types())) {
+        $product_code[] = $line_item_wrapper->commerce_product->type->value();
         $product_description[] = $line_item_wrapper->commerce_product->title->value();
         $product_name[] = $line_item_wrapper->commerce_product->title->value();
         $product_sku[] = $line_item_wrapper->commerce_product->sku->value();
@@ -268,7 +270,7 @@ class TodoPagoConnector {
         $total_amount[] = $this->format_price_amount($item_price_amount * $item_quantity, $currency_code);
       }
     }
-    $todopago_info['order']['CSITPRODUCTCODE'] = 'default';
+    $todopago_info['order']['CSITPRODUCTCODE'] = substr(implode('#', $product_code), 0, 255);
     $todopago_info['order']['CSITPRODUCTDESCRIPTION'] = substr(implode('#', $product_description), 0, 255);
     $todopago_info['order']['CSITPRODUCTNAME'] = substr(implode('#', $product_name), 0, 255);
     $todopago_info['order']['CSITPRODUCTSKU'] = substr(implode('#', $product_sku), 0, 255);

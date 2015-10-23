@@ -38,11 +38,22 @@ function commerce_todopago_requirements($phase) {
       'severity' => REQUIREMENT_OK,
     );
 
-    $library = libraries_load('todopago');
-    if (empty($library['loaded'])) {
+    $library = libraries_detect('todopago');
+    if (!$library || !$library['installed']) {
       $requirements['todopago_library']['description'] = t('The Todo Pago SDK is missing.');
       $requirements['todopago_library']['severity'] = REQUIREMENT_ERROR;
-    } else {
+    }
+    elseif (version_compare($library['version'], COMMERCE_TODOPAGO_SDK_VERSION, '!=')) {
+      $requirements['todopago_library']['description'] = t(
+        'The Todo Pago SDK installed version (@installed) is unsupported, please install version @expected.',
+        array(
+          '@installed' => $library['version'],
+          '@expected' => COMMERCE_TODOPAGO_SDK_VERSION,
+        )
+      );
+      $requirements['todopago_library']['severity'] = REQUIREMENT_ERROR;
+    }
+    else {
       $requirements['todopago_library']['value'] = t('Version: @version', array('@version' => $library['version']));
     }
 
