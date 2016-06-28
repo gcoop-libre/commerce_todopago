@@ -8,7 +8,7 @@
 /**
  * Supported SDK version.
  */
-define('COMMERCE_TODOPAGO_SDK_VERSION', '1.2.3');
+define('COMMERCE_TODOPAGO_SDK_VERSION', '1.4.1');
 
 /**
  * Implements hook_libraries_info().
