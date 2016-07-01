@@ -354,46 +354,68 @@ class TodoPagoConnector {
   }
 
   /**
-   * Update the status of a transaction
+   * Get the authorize answer of a transaction.
    *
    * @param $transaction
-   *   The transaction who's payment status will be updated
+   *   The transaction
    *
-   * @return
-   *   void
+   * @return array Info extracted from the answer.
+   *   This is an associative array with keys:
+   *     - payment_status: commerce status matching the todopago status.
+   *     - remote_status: todopago status.
+   *     - status_message: description of the status.
+   *     - answer: the original response from todopago.
    */
-  public function update_status(&$transaction) {
+  public function get_authorize_answer($transaction) {
     if (
-      (!empty($transaction->data['authorize_request']['RequestKey'])) &&
-      (!empty($transaction->data['answer_key']))
+      (empty($transaction->data['authorize_request']['RequestKey'])) ||
+      (empty($transaction->data['answer_key']))
     ) {
-      $get_authorize_answer_info = array(
-        'Security' => $this->settings['security'],
-        'Merchant'  => $this->settings['merchant'],
-        'RequestKey' => $transaction->data['authorize_request']['RequestKey'],
-        'AnswerKey' => $transaction->data['answer_key'],
-      );
-
-      $get_authorize_answer = $this->todopago->getAuthorizeAnswer($get_authorize_answer_info);
-
-      if (
-        (empty($get_authorize_answer)) ||
-        (empty($get_authorize_answer['StatusCode'])) ||
-        (!$payment_status = $this->payment_status_code($get_authorize_answer['StatusCode']))
-      ) {
-        throw new Exception(t('Could not get authorize answer: !response.', array('!response' => print_r($get_authorize_answer, TRUE))));
-      }
-
-      $transaction->status = $payment_status;
-      $transaction->remote_status = $get_authorize_answer['StatusCode'];
-      $transaction->message = $get_authorize_answer['StatusMessage'];
-
-      if (empty($transaction->payload['get_authorize_answer'])) {
-        $transaction->payload['get_authorize_answer'] = array();
-      }
-      $transaction->payload['get_authorize_answer'][REQUEST_TIME] = $get_authorize_answer;
+      $msg = t('Missing transaction data to call getAuthorizeAnswer.');
+      throw new Exception(t('Could not get authorize answer: !response.', array('!response' => $msg)));
     }
 
+    $get_authorize_answer_info = array(
+      'Security' => $this->settings['security'],
+      'Merchant'  => $this->settings['merchant'],
+      'RequestKey' => $transaction->data['authorize_request']['RequestKey'],
+      'AnswerKey' => $transaction->data['answer_key'],
+    );
+
+    $get_authorize_answer = $this->todopago->getAuthorizeAnswer($get_authorize_answer_info);
+
+    if (
+      (empty($get_authorize_answer)) ||
+      (empty($get_authorize_answer['StatusCode'])) ||
+      (!$payment_status = $this->payment_status_code($get_authorize_answer['StatusCode']))
+    ) {
+      throw new Exception(t('Could not get authorize answer: !response.', array('!response' => print_r($get_authorize_answer, TRUE))));
+    }
+
+    $response = array(
+      'payment_status' => $payment_status,
+      'remote_status' => $get_authorize_answer['StatusCode'],
+      'status_message' => $get_authorize_answer['StatusMessage'],
+      'answer' => $get_authorize_answer,
+    );
+
+    return $response;
+  }
+
+  /**
+   * Get the status of a transaction.
+   *
+   * @param $transaction
+   *   The transaction
+   *
+   * @return array Info extracted from the answer.
+   *   This is an associative array with keys:
+   *     - payment_status: commerce status matching the todopago status.
+   *     - remote_status: todopago status.
+   *     - status_message: description of the status.
+   *     - answer: the original response from todopago.
+   */
+  public function get_status($transaction) {
     $get_status_info = array(
       'MERCHANT' => $this->settings['merchant'],
       'OPERATIONID' => $transaction->remote_id,
@@ -410,14 +432,41 @@ class TodoPagoConnector {
       throw new Exception(t('Could not get transaction status from Todo Pago: !response.', array('!response' => print_r($get_status, TRUE))));
     }
 
-    $transaction->status = $payment_status;
-    $transaction->remote_status = $get_status['Operations']['RESULTCODE'];
-    $transaction->message = $get_status['Operations']['RESULTMESSAGE'];
+    $response = array(
+      'payment_status' => $payment_status,
+      'remote_status' => $get_status['Operations']['RESULTCODE'],
+      'status_message' => $get_status['Operations']['RESULTMESSAGE'],
+      'answer' => $get_status,
+    );
 
-    if (empty($transaction->payload['get_status'])) {
-      $transaction->payload['get_status'] = array();
+    return $response;
+  }
+
+  /**
+   * Update the status of a transaction.
+   *
+   * New transactions have to be processed by getAuthorizeAnswer, because
+   * getStatus depends on an an internal todopago batch process which sometimes
+   * takes a while to be ready. On the other hand, once a transaction has been
+   * processed we need to use getStatus because otherwise getAuthorizeAnswer
+   * might return an error.
+   *
+   * @param $transaction
+   *   The transaction whose payment status will be updated
+   * @param $new
+   *   Set to TRUE when calling this method inside the payment process
+   */
+  public function update_status(&$transaction, $new) {
+    $response = $new ? $this->get_authorize_answer($transaction) : $this->get_status($transaction);
+
+    $transaction->status = $response['payment_status'];
+    $transaction->remote_status = $response['remote_status'];
+    $transaction->message = $response['status_message'];
+
+    if (empty($transaction->payload['get_authorize_answer'])) {
+      $transaction->payload['get_authorize_answer'] = array();
     }
-    $transaction->payload['get_status'][REQUEST_TIME] = $get_status;
+    $transaction->payload['get_authorize_answer'][REQUEST_TIME] = $response['answer'];
 
     commerce_payment_transaction_save($transaction);
   }

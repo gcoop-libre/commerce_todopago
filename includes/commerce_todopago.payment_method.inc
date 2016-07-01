@@ -210,7 +210,7 @@ function commerce_todopago_redirect_form_validate($order, $payment_method) {
       $todopago = new TodoPagoConnector($payment_method['settings']);
 
       try {
-        $todopago->update_status($transaction);
+        $todopago->update_status($transaction, TRUE);
       }
       catch (Exception $e) {
         watchdog('commerce_todopago', 'There was an error fetching the status of the Transaction Nr. @transaction_number of the payment for Order Nr. @order_number: %error', array('@transaction_number' => $transaction->transaction_id, '@order_number' => $order->order_number, '%error' => $e->getMessage()), WATCHDOG_NOTICE);
